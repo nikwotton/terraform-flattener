@@ -89,9 +89,14 @@ fun getResources(inputDir: File, inputs: Map<String, JsonPrimitive> = emptyMap()
     }
 
     // Handle locals
-//    if (resources.containsKey("locals")) {
-//        json.decodeFromString<JsonObject>(outputJson.readText())["locals"]!!.jsonArray
-//    }
+    if (resources.containsKey("locals")) {
+        json.decodeFromString<JsonObject>(currentJson).jsonObject["locals"]!!.jsonArray.flatMap { it.jsonObject.toMutableMap().entries }.forEach { (key, value) ->
+            val decoded = json.decodeFromString<JsonObject>(currentJson).jsonObject.toMutableMap()
+            currentJson = json.encodeToString(JsonObject(decoded)).replace("\"\${local.$key}\"", value.toString().removeSurrounding("\""))
+        }
+        currentJson = json.encodeToString(JsonObject(json.decodeFromString<JsonObject>(currentJson).toMutableMap().apply { remove("locals") }))
+    }
+
     // Handle modules
     if (resources.containsKey("module")) {
         json.decodeFromString<JsonObject>(currentJson).jsonObject["module"]!!.jsonObject.forEach { (moduleName, moduleArray) ->
