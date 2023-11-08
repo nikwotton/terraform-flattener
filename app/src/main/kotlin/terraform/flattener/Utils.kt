@@ -58,3 +58,32 @@ operator fun JsonElement?.plus(other: JsonElement?): JsonElement? {
 
 fun <K, V> MutableMap<K, V?>.filterNotNull(): MutableMap<K, V> = entries.filter { it.value != null }.associate { it.key to it.value as V }.toMutableMap()
 operator fun JsonObject.minus(key: String): JsonObject = JsonObject(this.toMutableMap().apply { remove(key) })
+
+fun JsonObject.toResourceStrings(): String =
+    entries.joinToString("\n", "{\n", "\n}") {
+        if (it.key == "backend") {
+            it.value.jsonObject.entries.let {
+                require(it.size == 1)
+                "backend \"${it.first().key}\" ${it.first().value.toResourceStrings()}"
+            }
+        } else
+            "${it.key} ${if (it.value.isJsonArray()) "" else "= "}${it.value.toResourceStrings()}"
+    }.split("\n").joinToString("\n") { "  $it" }.removePrefix("  ").removeSuffix("  }") + "}"
+fun JsonArray.toResourceStrings(): String {
+    require(size == 1)
+    return first().toResourceStrings()
+}
+fun JsonElement.toResourceStrings(): String {
+    if (isJsonObject()) return jsonObject.toResourceStrings()
+    if (isJsonArray()) return jsonArray.toResourceStrings()
+    if (isJsonPrimitive()) return jsonPrimitive.toResourceStrings()
+    throw IllegalStateException("Found something that isn't an object or array - need to handle it")
+}
+
+fun JsonPrimitive.toResourceStrings(): String = when {
+    this.isString -> "$this"
+    this.isInt() -> "${this.int}"
+    this.isBoolean() -> "${this.boolean}"
+    this.toString() == "null" -> "null"
+    else -> TODO("Another type of primitive - $this")
+}

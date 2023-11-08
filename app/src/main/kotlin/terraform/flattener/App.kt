@@ -1,7 +1,13 @@
 package terraform.flattener
 
 import java.io.File
-
+/*
+# TODO: NOTE - if flattening, stacktraces WILL be broken....
+# Potential fixes:
+# - if planning with flatten'ed fails, re-plan without flattening
+# - make names as understandable as possible, so stacktraces aren't too bad
+# - translate all stacktraces
+ */
 fun main(args: Array<String>) {
     require(args.isNotEmpty()) { "Please pass in the starting directory you want to flatten and the output file path" }
     require(args.size == 2) { "Please pass only the starting directory you want to flatten and the output file path" }
