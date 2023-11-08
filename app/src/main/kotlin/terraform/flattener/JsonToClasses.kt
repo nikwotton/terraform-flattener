@@ -106,7 +106,7 @@ fun JsonObject.toClasses(inputDir: File): List<TerraformType> = flatMap {
         "output" -> {
             it.value.jsonObject.entries.flatMap { (name, fieldsList) ->
                 fieldsList.jsonArray.map {
-                    Output(name, it.jsonObject["value"].toString())
+                    Output(name, it.jsonObject["value"].toString().removeSurrounding("\"\${", "}\"").replace("\\n", "\n").replace("\\\"", "\""))
                 }
             }
         }

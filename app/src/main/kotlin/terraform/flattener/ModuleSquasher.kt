@@ -43,7 +43,7 @@ fun List<TerraformType>.squashModules(): List<FinalTerraformTypes> {
     }
     return filterIsInstance<FinalTerraformTypes>().map {
         when(it) {
-            is Resource -> it.copy(fields = it.fields.map { it.key to it.value.replaceOutputs() }.toMap())
+            is Resource -> it.copy(fields = it.fields.map { it.key to it.value.replaceOutputs() }.toMap(), count = it.count?.replaceOutputs())
             is Output -> it.copy(body = it.body.replaceOutputs())
             is Provider -> it.copy(fields = it.fields.map { it.key to it.value.replaceOutputs() }.toMap())
             is Terraform -> it
