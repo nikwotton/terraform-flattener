@@ -26,8 +26,8 @@ fun List<TerraformType>.squashVariables(inputs: Map<String, String>): List<Terra
     }
     return this.filter { it !is Variable }.map {
         when(it) {
-            is Resource -> it.copy(fields = it.fields.map { it.key to it.value.replaceVariables() }.toMap())
-            is Module -> it.copy(fields = it.fields.map { it.key to it.value.replaceVariables() }.toMap())
+            is Resource -> it.copy(fields = it.fields.map { it.key to it.value.replaceVariables() }.toMap(), count = it.count?.replaceVariables())
+            is Module -> it.copy(fields = it.fields.map { it.key to it.value.replaceVariables() }.toMap(), count = it.count?.replaceVariables())
             is Variable -> TODO("dafuq??")
             is Local -> it
             is Provider -> it.copy(fields = it.fields.map { it.key to it.value.replaceVariables() }.toMap())
