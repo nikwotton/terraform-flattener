@@ -9,13 +9,27 @@ import terraform.flattener.TerraformType.Terraform
 import terraform.flattener.TerraformType.Variable
 
 fun List<TerraformType>.squashLocals(): List<TerraformType> {
-    val toReplace = filterIsInstance<Local>().map {
+    val toReplace = filterIsInstance<Local>().associate {
         it.name to it.value.removeSurrounding("\"\${", "}\"").replace("\\n", "\n").replace("\\\"", "\"")
-    }.toMap()
-    fun String.replaceVariables(): String {
+    }
+
+    fun String.replacePass(): String {
         var ret = this
-        toReplace.forEach { ret = ret.replace("\${local.${it.key}}", it.value.removeSurrounding("\"")).replace("local.${it.key}", it.value) }
+        toReplace.entries.sortedByDescending { it.key.length }.forEach { ret = ret.replace("\${local.${it.key}}", it.value.removeSurrounding("\"")).replace("local.${it.key}", it.value) }
         return ret
+    }
+
+    fun String.replaceVariables(): String {
+        val maxTries = 100
+        var prev: String? = null
+        var current = this
+        var index = 0
+        while (prev != current && index < maxTries) {
+            prev = current
+            current = current.replacePass()
+            index++
+        }
+        return current
     }
     return this.filter { it !is Local }.map {
         when (it) {
