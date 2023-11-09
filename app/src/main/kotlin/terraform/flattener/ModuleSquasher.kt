@@ -24,7 +24,7 @@ fun List<TerraformType>.squashModules(): List<FinalTerraformTypes> {
             require(!toReplace.containsKey(key)) { "Found duplicate key somehow: $key" }
             toReplace[key] = it.body
         }
-        if (module.count != null) {
+        val retResources = if (module.count != null) {
             subResources.map {
                 if (it.count == null) {
                     it.copy(count = module.count)
@@ -34,6 +34,14 @@ fun List<TerraformType>.squashModules(): List<FinalTerraformTypes> {
                 }
             }
         } else subResources
+        retResources.map { resource ->
+            fun String.fixReferences(): String {
+                var ret = this
+                subThings.filterIsInstance<Resource>().forEach { ret = ret.replace("${it.resourceType}.${it.name}", "${it.resourceType}.${module.name}_${it.name}") }
+                return ret
+            }
+            resource.copy(count = resource.count?.fixReferences(), fields = resource.fields.map { it.key to it.value.fixReferences() }.toMap())
+        }
     }
     require(this.all { it is Module || it is FinalTerraformTypes }) { "Found an unhandled type - ${this.filter { it !is FinalTerraformTypes && it !is Module }.map { it.javaClass.simpleName }}" }
     fun String.replaceOutputs(): String {
