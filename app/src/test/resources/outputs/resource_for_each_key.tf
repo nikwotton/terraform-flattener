@@ -24,7 +24,7 @@ resource "github_repository" "my_repo" {
     "my_repo_3",
     "my_repo_4",
     "my_repo_5",
-  ])))] : values(toset([
+  ])))] : keys(toset([
     "my_repo_1",
     "my_repo_2",
     "my_repo_3",

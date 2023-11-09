@@ -25,8 +25,10 @@ fun JsonObject.toClasses(inputDir: File): List<TerraformType> = flatMap {
                 if (forEach != null) {
                     val startingArray = forEach.removeSurrounding("\"\${", "}\"")
                     count = "length($startingArray)"
+                    val wrappedKeys = "can(tolist($startingArray)) ? $startingArray[count.index] : keys($startingArray)[count.index]"
+                    val wrappedValues = "can(tolist($startingArray)) ? $startingArray[count.index] : values($startingArray)[count.index]"
                     fields.keys.forEach {
-                        fields[it] = fields[it]!!.replace("each.value", "$startingArray[count.index]")
+                        fields[it] = fields[it]!!.replace("each.value", wrappedValues).replace("each.key", wrappedKeys)
                     }
                 }
                 if (count != null) {
@@ -37,6 +39,8 @@ fun JsonObject.toClasses(inputDir: File): List<TerraformType> = flatMap {
                         val list = count!!.removeSurrounding("length(", ")")
                         require(starting.contains("$list[count.index]")) { "Haven't figured out how to handle this case yet..." }
                         fields[it] = starting.replace("$list[count.index]", "$list[floor(count.index % length($list))]")
+                            .replace("keys($list)[count.index]", "keys($list)[floor(count.index % length($list))]")
+                            .replace("values($list)[count.index]", "values($list)[floor(count.index % length($list))]")
                     }
                 }
                 Module(name = moduleName, source = source, fields = fields.filterKeys { it !in listOf("source", "for_each", "count") }, count = count)
@@ -53,9 +57,11 @@ fun JsonObject.toClasses(inputDir: File): List<TerraformType> = flatMap {
                         require(count == null || forEach == null) { "Found a resource with a for_each and a count" }
                         if (forEach != null) {
                             val startingArray = forEach.removeSurrounding("\"\${", "}\"")
-                            count = "length(${startingArray})"
+                            count = "length($startingArray)"
+                            val wrappedKeys = "can(tolist($startingArray)) ? $startingArray[count.index] : keys($startingArray)[count.index]"
+                            val wrappedValues = "can(tolist($startingArray)) ? $startingArray[count.index] : values($startingArray)[count.index]"
                             fields.keys.forEach {
-                                fields[it] = fields[it]!!.replace("each.value", "$startingArray[count.index]")
+                                fields[it] = fields[it]!!.replace("each.value", wrappedValues).replace("each.key", wrappedKeys)
                             }
                         }
                         if (count != null) {
@@ -66,6 +72,8 @@ fun JsonObject.toClasses(inputDir: File): List<TerraformType> = flatMap {
                                 val list = count!!.removeSurrounding("length(", ")")
                                 require(starting.contains("$list[count.index]")) { "Haven't figured out how to handle this case yet..." }
                                 fields[it] = starting.replace("$list[count.index]", "$list[floor(count.index % length($list))]")
+                                    .replace("keys($list)[count.index]", "keys($list)[floor(count.index % length($list))]")
+                                    .replace("values($list)[count.index]", "values($list)[floor(count.index % length($list))]")
                             }
                         }
                         Resource(resourceType = resourceType, name = resourceName, fields = fields.filterKeys { it !in listOf("for_each", "count") }, count = count)

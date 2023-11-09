@@ -21,13 +21,13 @@ fun flatten(inputDir: File, outputFile: File) {
 
     val resourcs = resources.filterIsInstance<Resource>().joinToString("\n") {
         """resource "${it.resourceType}" "${it.name}" {${it.count?.let { "\n  count = ${it.removeSurrounding("\"\${'$'}{", "}\"").replace("\\n", "\n").replace("\\\"", "\"")}" } ?: ""}
-            |${it.fields.entries.joinToString("\n") { "  ${it.key} = ${it.value.replace("\"\${each.value}\"", "each.value")}" } }
+            |${it.fields.entries.joinToString("\n") { "  ${it.key} = ${it.value}" } }
             |}
         """.trimMargin()
     }
     val providers = resources.filterIsInstance<Provider>().joinToString("\n") {
         """provider "${it.name}" {
-            |${it.fields.entries.joinToString("\n") { "  ${it.key} = ${it.value.replace("\"\${each.value}\"", "each.value")}" } }
+            |${it.fields.entries.joinToString("\n") { "  ${it.key} = ${it.value}" } }
             |}
         """.trimMargin()
     }
