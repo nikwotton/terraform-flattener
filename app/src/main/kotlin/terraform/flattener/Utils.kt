@@ -59,6 +59,8 @@ operator fun JsonElement?.plus(other: JsonElement?): JsonElement? {
 fun <K, V> MutableMap<K, V?>.filterNotNull(): MutableMap<K, V> = entries.filter { it.value != null }.associate { it.key to it.value as V }.toMutableMap()
 operator fun JsonObject.minus(key: String): JsonObject = JsonObject(this.toMutableMap().apply { remove(key) })
 
+fun String.indent(): String = prependIndent("  ")
+
 fun JsonObject.toResourceStrings(): String =
     entries.joinToString("\n", "{\n", "\n}") {
         if (it.key == "backend") {
@@ -68,7 +70,7 @@ fun JsonObject.toResourceStrings(): String =
             }
         } else
             "${it.key} ${if (it.value.isJsonArray()) "" else "= "}${it.value.toResourceStrings()}"
-    }.split("\n").joinToString("\n") { "  $it" }.removePrefix("  ").removeSuffix("  }") + "}"
+    }.indent().removePrefix("  ").removeSuffix("  }") + "}"
 fun JsonArray.toResourceStrings(): String {
     require(size == 1)
     return first().toResourceStrings()

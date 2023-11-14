@@ -6,6 +6,10 @@ import java.io.InputStream
 import java.io.InputStreamReader
 import java.util.function.Consumer
 import kotlinx.serialization.json.Json
+import kotlinx.serialization.json.JsonObject
+import kotlinx.serialization.json.jsonArray
+import kotlinx.serialization.json.jsonObject
+import kotlinx.serialization.json.jsonPrimitive
 import terraform.flattener.TerraformType.Provider
 import terraform.flattener.TerraformType.Resource
 import terraform.flattener.TerraformType.Terraform
@@ -21,13 +25,13 @@ fun flatten(inputDir: File, outputFile: File) {
 
     val resourcs = resources.filterIsInstance<Resource>().joinToString("\n") {
         """resource "${it.resourceType}" "${it.name}" {${it.count?.let { "\n  count = ${it.removeSurrounding("\"\${'$'}{", "}\"").replace("\\n", "\n").replace("\\\"", "\"")}" } ?: ""}
-            |${it.fields.entries.joinToString("\n") { "  ${it.key} = ${it.value}" } }
+            |${it.fields.filterKeys { it != "dynamic" }.entries.joinToString("\n") { "  ${it.key} = ${it.value}" }}${it.fields["dynamic"]?.let { "\n${it.dynamicToString()}" } ?: ""}
             |}
         """.trimMargin()
     }
     val providers = resources.filterIsInstance<Provider>().joinToString("\n") {
         """provider "${it.name}" {
-            |${it.fields.entries.joinToString("\n") { "  ${it.key} = ${it.value}" } }
+            |${it.fields.entries.joinToString("\n") { "  ${it.key} = ${it.value}" }}
             |}
         """.trimMargin()
     }
@@ -43,6 +47,26 @@ fun flatten(inputDir: File, outputFile: File) {
     outputFile.writeText(ret)
 }
 
+fun String.dynamicToString(): String = json.decodeFromString<JsonObject>(this).jsonObject.entries.joinToString("\n") {
+    it.value.jsonArray.joinToString("\n", "dynamic \"${it.key}\" {\n", "\n}") {
+        it.jsonObject.entries.sortedBy { if (it.key == "for_each") 0 else 1 }.joinToString("\n") {
+            if (it.key == "for_each") {
+                it.value.jsonArray.joinToString("\n", "for_each = [\n", "\n]") {
+                    it.jsonObject.entries.joinToString("\n", "{\n", "\n}") { "  ${it.key} = ${it.value}" }.indent()
+                }
+            } else {
+                it.value.jsonArray.joinToString("\n", "${it.key} {\n", "\n}") {
+                    it.jsonObject.entries.joinToString("\n") {
+                        it.value.jsonArray.joinToString("\n", "${it.key} {\n", "\n}") {
+                            it.jsonObject.entries.joinToString("\n") { "${it.key} = ${it.value.jsonPrimitive.toString().removeSurrounding("\"\${", "}\"")}" }.indent()
+                        }.indent()
+                    }
+                }
+            }
+        }.indent()
+    }.indent()
+}
+
 fun getResources(inputDir: File, inputs: Map<String, String> = emptyMap()): List<FinalTerraformTypes> =
     convertToJson(inputDir).toClasses(inputDir).squashVariables(inputs).squashLocals().squashModules()
 
@@ -51,6 +75,7 @@ internal class StreamGobbler(private val inputStream: InputStream, private val c
     override fun run() =
         BufferedReader(InputStreamReader(inputStream)).lines().forEach(consumeInputLine)
 }
+
 internal open class StringBuilderConsumer : Consumer<String> {
     private val sb = StringBuilder()
 
